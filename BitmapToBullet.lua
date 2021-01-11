@@ -3,10 +3,12 @@
 if syntaxcheck then return end
 
 local bitmapPath = [[C:\Users\sands\Desktop\20by20.bmp]]
-local spawnTable = {130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 130, 0, 0}
+local spawnTable = {[0]= 130,[1]= 130,[2]= 130,[3]= 130,[4]= 130,[5]= 130,[6]= 130,[7]= 130,[8]= 130,[9]= 130,[10]= 130,[11]= 130,[12]= 130,[13]= 130,[14]= 130,[15]= 0}
+--0:black, 1:130, 2:130, 3:130, 4:130, 5:130, 6:130, 7:130, 8:130, 9:130, 10:130, 11:130, 12:130, 13:130, 14:130, 15:0
+--4bpp bitmap colors ^
 local gapBetweenBullets = 1
 
-local pixelByteSize = 4
+--local pixelByteSize = 4
 local playerXPtr = "[[[BaseB]+40]+28]+80"
 local playerYPtr = "[[[BaseB]+40]+28]+84"
 local playerZPtr = "[[[BaseB]+40]+28]+88"
@@ -48,7 +50,6 @@ function Point:CreateNoPtrs(x, y, z)
    pnt.x = x
    pnt.y = y
    pnt.z = z
-   if (pnt.x == nil or pnt.y == nil or pnt.z == nil) then return nil end
    return pnt
 end
 
@@ -68,8 +69,6 @@ local function LaunchB(point, bID, bAngX, bAngY, bAngZ)
 	writeFloat("BAngleZ", bAngZ)
     autoAssemble("createThread(bulletSpawn)")
 end
-
-playerPoint = Point:Create(playerXPtr, playerYPtr, playerZPtr)
 
 local function GetPixelArrayOffset(handle) --file descriptor
 	local firstByte = handle:read(2) -- first 2 bytes are file type
@@ -95,7 +94,7 @@ end
 local function LoadPixelArray(offset, handle)
   handle:seek(offset)
   local i = 0
-  local PixelArray = {}
+  local pixelArray = {}
   local row = {}
   for (yIndex = 0, bmpHeight, 1) do
     for (xIndex = 0, bmpWidth, 1) do
@@ -108,15 +107,15 @@ local function LoadPixelArray(offset, handle)
       xIndex += 1
       row[xIndex] = secondPixel -- ^
     end
-    PixelArray[yIndex] = row
+    pixelArray[yIndex] = row
   end
-  return PixelArray
+  return pixelArray
 end
 
 --The 4-bits per pixel (4bpp) format supports 16 distinct colors and stores
 --2 pixels per 1 byte, the left-most pixel being in the more significant nibble.
 --Each pixel value is a 4-bit index into a table of up to 16 colors.
-local function SpawnPixelArray(handle, bitmapHeight, bitmapWidth, xOffset, yOffset, zOffset) -- need to add support for angles later, this will always print along the x-y axis and never use z
+local function SpawnPixelArray(handle, pixelArray, bitmapHeight, bitmapWidth, xOffset, yOffset, zOffset) -- need to add support for angles later, this will always print along the x-y axis and never use z
   local spawnPoint = Point:Create(playerXPtr, playerYPtr, playerZPtr)
   spawnPoint.x += xOffset
   spawnPoint.y += yOffset
@@ -127,7 +126,7 @@ local function SpawnPixelArray(handle, bitmapHeight, bitmapWidth, xOffset, yOffs
   for (yIndex = 0, bmpHeight, 1) do
     for (xIndex = 0, bmpWidth, 1) do
       bulletToLaunch = spawnTable[pixelArray[xIndex][yIndex]] -- might need to swap x and y, idk how lua nested table accessing works
-      if bulletToLaunch ~= 0 then LaunchB(botLeftCorner, bulletToLaunch, 0, 0, 0) end
+      if bulletToLaunch ~= nil then LaunchB(botLeftCorner, bulletToLaunch, 0, 0, 0) end
       botLeftCorner.x += gapBetweenBullets
     end
     botLeftCorner.y += gapBetweenBullets
@@ -138,26 +137,15 @@ end
 	handle:seek("cur", pixelByteSize) --advances the file by 4 (bytes I assume?)
 end]]
 
-local function MainLoop()
-
-end
-
 local bitmapFd = GetFileDescriptor(bitmapPath, rb) -- might need to make global if it's not visible in MainLoop
 if bitmapFd == nil then return end
 local dimensions = GetBmpDimensions(bitmapFd)
-bmpHeight = dimensions["height"] -- try to make these local
-bmpWidth = dimensions["width"]
-SpawnPixelArray(bitmapFd, bmpHeight, bmpWidth, 0, 0, 0)
+local bmpHeight = dimensions["height"]
+local bmpWidth = dimensions["width"]
+local pixelArray = LoadPixelArray(GetPixelArrayOffset(handle))
+SpawnPixelArray(bitmapFd, pixelArray, bmpHeight, bmpWidth, 0, 0, 0)
 --bitmapFd:seek(GetPixelArrayOffset(bitmapFd)) -- sets the file pointer to start of pixel array
-
---[[spawnTimer = createTimer(getMainForm())
-spawnTimer.Interval = 500
-spawnTimer.OnTimer = MainLoop
-spawnTimer.setEnabled(true)]]
 
 [DISABLE]
 {$lua}
 if syntaxcheck then return end
-if spawnTimer ~= nil then
-  spawnTimer.setEnabled(false)
-end
