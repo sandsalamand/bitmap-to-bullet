@@ -8,7 +8,6 @@ local spawnTable = {[0]= 130,[1]= 130,[2]= 130,[3]= 130,[4]= 130,[5]= 130,[6]= 1
 --4bpp bitmap colors ^
 local gapBetweenBullets = 1
 
---local pixelByteSize = 4
 local playerXPtr = "[[[BaseB]+40]+28]+80"
 local playerYPtr = "[[[BaseB]+40]+28]+84"
 local playerZPtr = "[[[BaseB]+40]+28]+88"
@@ -29,52 +28,53 @@ Point = {}
 Point.__index = Point
 
 function Point:Create(xPtr, yPtr, zPtr)
-   local pnt = {}             -- new object
-   setmetatable(pnt, Point)  -- make Account handle lookup
-   pnt.xPtr = xPtr
-   pnt.yPtr = yPtr
-   pnt.zPtr = zPtr
-   pnt.x = readFloat(xPtr)
-   pnt.y = readFloat(yPtr)
-   pnt.z = readFloat(zPtr)
-   if (pnt.x == nil or pnt.y == nil or pnt.z == nil) then return nil end
-   return pnt
+  local pnt = {}             -- new object
+  setmetatable(pnt, Point)  -- make Account handle lookup
+  pnt.xPtr = xPtr
+  pnt.yPtr = yPtr
+  pnt.zPtr = zPtr
+  pnt.x = readFloat(xPtr)
+  pnt.y = readFloat(yPtr)
+  pnt.z = readFloat(zPtr)
+  if (pnt.x == nil or pnt.y == nil or pnt.z == nil) then return nil end
+  return pnt
 end
 
 function Point:CreateNoPtrs(x, y, z)
-   local pnt = {}             -- new object
-   setmetatable(pnt, Point)  -- make Account handle lookup
-   pnt.xPtr = nil
-   pnt.yPtr = nil
-   pnt.zPtr = nil
-   pnt.x = x
-   pnt.y = y
-   pnt.z = z
-   return pnt
+  local pnt = {}             -- new object
+  setmetatable(pnt, Point)  -- make Account handle lookup
+  pnt.xPtr = nil
+  pnt.yPtr = nil
+  pnt.zPtr = nil
+  pnt.x = x
+  pnt.y = y
+  pnt.z = z
+  return pnt
 end
 
 function Point:Update()
-   self.x = readFloat(self.xPtr)
-   self.y = readFloat(self.yPtr)
-   self.z = readFloat(self.zPtr)
+  self.x = readFloat(self.xPtr)
+  self.y = readFloat(self.yPtr)
+  self.z = readFloat(self.zPtr)
 end
 
 local function LaunchB(point, bID, bAngX, bAngY, bAngZ)
 	writeFloat("BCoordX", point.x)
 	writeFloat("BCoordY", point.y)
 	writeFloat("BCoordZ", point.z)
-    writeInteger("BulletID", bID)
-    writeFloat("BAngleX", bAngX)
-    writeFloat("BAngleY", bAngY)
+  writeInteger("BulletID", bID)
+  writeFloat("BAngleX", bAngX)
+  writeFloat("BAngleY", bAngY)
 	writeFloat("BAngleZ", bAngZ)
-    autoAssemble("createThread(bulletSpawn)")
+  autoAssemble("createThread(bulletSpawn)")
 end
 
 local function GetPixelArrayOffset(handle) --file descriptor
-	local firstByte = handle:read(2) -- first 2 bytes are file type
-    if (firstByte != 42) then -- if that doesnt work, try 0x4D for hex
-    	print("You tried to use a file that's not a bitmap!")
-        return nil
+	local firstByte = handle:read(1) -- first 2 bytes are file type
+  local num = string.byte(firstByte)
+  if (firstByte != 66) then -- if that doesnt work, try 0x4D for hex
+    print("You tried to use a file that's not a bitmap!")
+      return nil
 	end
     handle:seek(10)
 	local offset = handle:read(4) -- 10th byte contains 4-byte offset of pixel array
@@ -92,18 +92,21 @@ local function GetBmpDimensions(handle)
 end
 
 local function LoadPixelArray(offset, handle)
-  handle:seek(offset)
+  local numOffset = string.byte(offset)
+  handle:seek(numOffset)
   local i = 0
   local pixelArray = {}
   local row = {}
   for (yIndex = 0, bmpHeight, 1) do
     for (xIndex = 0, bmpWidth, 1) do
       twoPixels = handle:read(1)
-      handle:seek(offset + i)
+      handle:seek(numOffset + i)
       i++
       firstPixel = bit32.band(twoPixels, 15) -- 0F
       secondPixel = bit32.band(bit32.arshift(twoPixels, 4), 15)
-      row[xIndex] = firstPixel -- need to convert binary pixel to integer first??
+      string.byte(firstPixel)
+      string.byte(secondPixel)
+      row[xIndex] = firstPixel -- need to convert binary pixel to integer first?
       xIndex += 1
       row[xIndex] = secondPixel -- ^
     end
@@ -133,18 +136,15 @@ local function SpawnPixelArray(handle, pixelArray, bitmapHeight, bitmapWidth, xO
   end
 end
 
---[[local function AdvanceFilePointer(handle)
-	handle:seek("cur", pixelByteSize) --advances the file by 4 (bytes I assume?)
-end]]
-
-local bitmapFd = GetFileDescriptor(bitmapPath, rb) -- might need to make global if it's not visible in MainLoop
-if bitmapFd == nil then return end
-local dimensions = GetBmpDimensions(bitmapFd)
-local bmpHeight = dimensions["height"]
-local bmpWidth = dimensions["width"]
-local pixelArray = LoadPixelArray(GetPixelArrayOffset(handle))
-SpawnPixelArray(bitmapFd, pixelArray, bmpHeight, bmpWidth, 0, 0, 0)
---bitmapFd:seek(GetPixelArrayOffset(bitmapFd)) -- sets the file pointer to start of pixel array
+local function SpawnFromFile(bitmapPath)
+  local bitmapFd = GetFileDescriptor(bitmapPath, rb) -- might need to make global if it's not visible in MainLoop
+  if bitmapFd == nil then return end
+  local dimensions = GetBmpDimensions(bitmapFd)
+  local bmpHeight = dimensions["height"]
+  local bmpWidth = dimensions["width"]
+  local pixelArray = LoadPixelArray(GetPixelArrayOffset(handle))
+  SpawnPixelArray(bitmapFd, pixelArray, bmpHeight, bmpWidth, 0, 0, 0)
+end
 
 [DISABLE]
 {$lua}
