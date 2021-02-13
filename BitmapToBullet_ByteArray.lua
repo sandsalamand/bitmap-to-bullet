@@ -2,13 +2,13 @@
 {$lua}
 if syntaxcheck then return end
 
-local bitmapName = "bmp.bmp"
-local spawnOffset = {["x"] = 0, ["y"] = 0, ["z"] = 10}
-local overloadTable = 12453000
-local spawnTable = {[0]= 13530000,[1]= 13530000,[2]= 13530000,[3]= 13530000,[4]= 13530000,[5]= 13530000,[6]= 13530000,[7]= 13530000,[8]= 13530000,[9]= 13530000,[10]= 13530000,[11]= 13530000,[12]= 13530000,[13]= 13530000,[14]= 13530000,[15]= 0}
+--==========OPTIONS==========
+local overloadTable = nil --12453000 black flame
+local spawnTable = {[0]= 12453000,[1]= 13530000,[2]= 13530000,[3]= 13530000,[4]= 13530000,[5]= 13530000,[6]= 13530000,[7]= 13530000,[8]= 13530000,[9]= 13530000,[10]= 13530000,[11]= 13530000,[12]= 12411000,[13]= 13530000,[14]= 13530000,[15]= 0}
 --0:black, 1:130, 2:130, 3:130, 4:130, 5:130, 6:130, 7:130, 8:130, 9:red, 10:130, 11:blue, 12:130, 13:130, 14:130, 15:white?
 --4bpp bitmap colors ^, recommended that 15 be 0 since Paint makes bg white
 local gapBetweenBullets = 0.3
+
 
 local playerXPtr = "[[[BaseB]+40]+28]+80"
 local playerYPtr = "[[[BaseB]+40]+28]+84"
@@ -19,7 +19,7 @@ Point.__index = Point
 
 function Point:Create(xPtr, yPtr, zPtr)
   local pnt = {}             -- new object
-  setmetatable(pnt, Point)  -- make Account handle lookup
+  setmetatable(pnt, Point)  -- make Point handle lookup
   pnt.xPtr = xPtr
   pnt.yPtr = yPtr
   pnt.zPtr = zPtr
@@ -31,8 +31,8 @@ function Point:Create(xPtr, yPtr, zPtr)
 end
 
 function Point:CreateNoPtrs(x, y, z)
-  local pnt = {}             -- new object
-  setmetatable(pnt, Point)  -- make Account handle lookup
+  local pnt = {}
+  setmetatable(pnt, Point)
   pnt.xPtr = nil
   pnt.yPtr = nil
   pnt.zPtr = nil
@@ -66,14 +66,16 @@ local function GetByteArray(bitmap)
 end
 
 local function LaunchB(point, bID, bAngX, bAngY, bAngZ)
-	writeFloat("BCoordX", point.x)
-	writeFloat("BCoordY", point.y)
-	writeFloat("BCoordZ", point.z)
-  writeInteger("BulletID", bID)
-  writeFloat("BAngleX", bAngX)
-  writeFloat("BAngleY", bAngY)
-	writeFloat("BAngleZ", bAngZ)
-  autoAssemble("createThread(bulletSpawn)")
+	if (bID ~= 0) then
+		writeFloat("BCoordX", point.x)
+		writeFloat("BCoordY", point.y)
+		writeFloat("BCoordZ", point.z)
+  		writeInteger("BulletID", bID)
+ 		writeFloat("BAngleX", bAngX)
+  		writeFloat("BAngleY", bAngY)
+		writeFloat("BAngleZ", bAngZ)
+  		autoAssemble("createThread(bulletSpawn)")
+    end
 end
 
 local function GetDword(table, firstByte)
@@ -146,7 +148,9 @@ local function SpawnPixelArray(pixelArray, dimensions, xOffset, yOffset, zOffset
       	if spawnTable[pixelArray[yIndex][xIndex]] ~= 0 then
         	LaunchB(botLeftCorner, overloadTable, 0, 0, 0)
         end
-      else LaunchB(botLeftCorner, spawnTable[pixelArray[yIndex][xIndex]], 0, 0, 0) -- might need to swap x and y, idk how lua nested table accessing works
+      else
+		--print (pixelArray[yIndex][xIndex])
+        LaunchB(botLeftCorner, spawnTable[pixelArray[yIndex][xIndex]], 0, 0, 0) -- might need to swap x and y, idk how lua nested table accessing works
       end
       botLeftCorner.x = botLeftCorner.x + gapBetweenBullets
     end
@@ -155,17 +159,15 @@ local function SpawnPixelArray(pixelArray, dimensions, xOffset, yOffset, zOffset
   end
 end
 
-local function SpawnFromFile(bitmapName)
+function SpawnBitmap(bitmapName, x, y, z)
   local byteArray = GetByteArray(bitmapName)
   if byteArray == nil then print("byte array nil") return end
   local dimensions = GetBmpDimensions(byteArray)
   local bmpHeight = dimensions["height"]
   local bmpWidth = dimensions["width"]
   local pixelArray = LoadPixelArray(byteArray, bmpHeight, bmpWidth)
-  SpawnPixelArray(pixelArray, dimensions, spawnOffset["x"], spawnOffset["y"], spawnOffset["z"])
+  SpawnPixelArray(pixelArray, dimensions, x, y, z)
 end
-
-SpawnFromFile(bitmapName)
 
 [DISABLE]
 {$lua}
