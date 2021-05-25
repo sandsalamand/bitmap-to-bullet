@@ -3,16 +3,13 @@
 if syntaxcheck then return end
 
 --==========OPTIONS==========
-local overloadTable = nil --12453000 black flame
-local spawnTable = {[0]= 12453000,[1]= 13530000,[2]= 13530000,[3]= 13530000,[4]= 13530000,[5]= 13530000,[6]= 13530000,[7]= 13530000,[8]= 13530000,[9]= 111,[10]= 13530000,[11]= 13530000,[12]= 70,[13]= 13530000,[14]= 13530000,[15]= 0}
---0:black, 1:130, 2:130, 3:130, 4:130, 5:130, 6:130, 7:130, 8:130, 9:red, 10:130, 11:blue, 12:130, 13:130, 14:130, 15:white?
---4bpp bitmap colors ^, recommended that 15 be 0 since Paint makes bg white
+local overloadTable = nil --12453000 black flame || makes all bullets this color if not set to nil
 local gapBetweenBullets = 0.3
 
 
-local playerXPtr = "[[[BaseB]+40]+28]+80"
-local playerYPtr = "[[[BaseB]+40]+28]+84"
-local playerZPtr = "[[[BaseB]+40]+28]+88"
+local playerXPtr = "[[[144768E78]+40]+28]+80"
+local playerYPtr = "[[[144768E78]+40]+28]+84"
+local playerZPtr = "[[[144768E78]+40]+28]+88"
 
 Point = {}
 Point.__index = Point
@@ -130,7 +127,7 @@ end
 --The 4-bits per pixel (4bpp) format supports 16 distinct colors and stores
 --2 pixels per 1 byte, the left-most pixel being in the more significant nibble.
 --Each pixel value is a 4-bit index into a table of up to 16 colors.
-local function SpawnPixelArray(pixelArray, dimensions, xOffset, yOffset, zOffset) -- need to add support for angles later, this will always print along the x-y axis and never use z
+local function SpawnPixelArray(pixelArray, dimensions, xOffset, yOffset, zOffset, colorTable) -- need to add support for angles later, this will always print along the x-y axis and never use z
   local bmpHeight = dimensions["height"]
   local bmpWidth = dimensions["width"]
   local spawnPoint = Point:Create(playerXPtr, playerYPtr, playerZPtr)
@@ -145,12 +142,12 @@ local function SpawnPixelArray(pixelArray, dimensions, xOffset, yOffset, zOffset
     for xIndex = 1, bmpWidth, 1 do
     --print("y = ", yIndex, "x = ", xIndex)
       if overloadTable ~= nil then
-      	if spawnTable[pixelArray[yIndex][xIndex]] ~= 0 then
+      	if colorTable[pixelArray[yIndex][xIndex]] ~= 0 then
         	LaunchB(botLeftCorner, overloadTable, 0, 0, 0)
         end
       else
 		--print (pixelArray[yIndex][xIndex])
-        LaunchB(botLeftCorner, spawnTable[pixelArray[yIndex][xIndex]], 0, 0, 0) -- might need to swap x and y, idk how lua nested table accessing works
+        LaunchB(botLeftCorner, colorTable[pixelArray[yIndex][xIndex]], 0, 0, 0) -- might need to swap x and y, idk how lua nested table accessing works
       end
       botLeftCorner.x = botLeftCorner.x + gapBetweenBullets
     end
@@ -159,14 +156,14 @@ local function SpawnPixelArray(pixelArray, dimensions, xOffset, yOffset, zOffset
   end
 end
 
-function SpawnBitmap(bitmapName, x, y, z)
+function SpawnBitmap(bitmapName, colorTable, x, y, z)
   local byteArray = GetByteArray(bitmapName)
   if byteArray == nil then print("byte array nil") return end
   local dimensions = GetBmpDimensions(byteArray)
   local bmpHeight = dimensions["height"]
   local bmpWidth = dimensions["width"]
   local pixelArray = LoadPixelArray(byteArray, bmpHeight, bmpWidth)
-  SpawnPixelArray(pixelArray, dimensions, x, y, z)
+  SpawnPixelArray(pixelArray, dimensions, x, y, z, colorTable)
 end
 
 [DISABLE]
