@@ -3,7 +3,7 @@
 if syntaxcheck then return end
 
 --==========OPTIONS==========
-local overloadTable = nil --12453000 black flame || makes all bullets this color if not set to nil
+local overloadTable = nil --makes all bullets this color if not set to nil
 local gapBetweenBullets = 0.3
 
 
@@ -55,7 +55,7 @@ local function GetByteArray(bitmap)
   byteStream.Position = 0
   local byteArray = byteStream.read(tableFile.Stream.Size)
   byteStream.destroy()
-  if (byteArray[1] ~= 66) then -- if that doesnt work, try 0x4D for hex
+  if (byteArray[1] ~= 66) then
     print("You tried to use a file that's not a bitmap!")
     return nil
   end
@@ -96,23 +96,19 @@ local function GetBmpDimensions(byteArray)
   return dimensions
 end
 
-local function LoadPixelArray(byteArray, bmpHeight, bmpWidth)
+local function LoadPixelArray(byteArray, dimensions)
   local pixelArray = {}
-  local widthInBytes = math.ceil(bmpWidth/2)
+  local widthInBytes = math.ceil(dimensions["width"]/2)
   local dwordOffset = 4 - (widthInBytes%4)
   local byteTracker = GetPixelArrayOffset(byteArray)
   local numOffset = byteTracker
-  for yIndex = 1, bmpHeight, 1 do
+  for yIndex = 1, dimensions["height"], 1 do
     local row = {}
     for xIndex = 1, widthInBytes, 1 do
       twoPixels = byteArray[byteTracker + 1]
-      --print("yIndex = ", yIndex, "byteTracker = ", byteTracker)
       byteTracker = byteTracker + 1
       firstPixel = bAnd(twoPixels, 0xF) -- 0F
-      --print(firstPixel)
       secondPixel = bAnd(bShr(twoPixels, 4), 0xF)
-      --print(secondPixel)
-      --print(xIndex, ": ", row[xIndex])
       table.insert(row, firstPixel)
       table.insert(row, secondPixel)
     end
@@ -140,14 +136,12 @@ local function SpawnPixelArray(pixelArray, dimensions, xOffset, yOffset, zOffset
   botLeftCorner.y = spawnPoint.y - (gapBetweenBullets * (bmpHeight/2))
   for yIndex = 1, bmpHeight, 1 do
     for xIndex = 1, bmpWidth, 1 do
-    --print("y = ", yIndex, "x = ", xIndex)
       if overloadTable ~= nil then
       	if colorTable[pixelArray[yIndex][xIndex]] ~= 0 then
         	LaunchB(botLeftCorner, overloadTable, 0, 0, 0)
         end
       else
-		--print (pixelArray[yIndex][xIndex])
-        LaunchB(botLeftCorner, colorTable[pixelArray[yIndex][xIndex]], 0, 0, 0) -- might need to swap x and y, idk how lua nested table accessing works
+        LaunchB(botLeftCorner, colorTable[pixelArray[yIndex][xIndex]], 0, 0, 0)
       end
       botLeftCorner.x = botLeftCorner.x + gapBetweenBullets
     end
@@ -160,9 +154,7 @@ function SpawnBitmap(bitmapName, colorTable, x, y, z)
   local byteArray = GetByteArray(bitmapName)
   if byteArray == nil then print("byte array nil") return end
   local dimensions = GetBmpDimensions(byteArray)
-  local bmpHeight = dimensions["height"]
-  local bmpWidth = dimensions["width"]
-  local pixelArray = LoadPixelArray(byteArray, bmpHeight, bmpWidth)
+  local pixelArray = LoadPixelArray(byteArray, dimensions)
   SpawnPixelArray(pixelArray, dimensions, x, y, z, colorTable)
 end
 
