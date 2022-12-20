@@ -1,0 +1,7 @@
+Lua tables start at 1, so GetDword(5) would really get the Dword at the 04 index when viewed in a hex editor
+
+https://en.wikipedia.org/wiki/BMP_file_format
+Offsets (i.e. starting addresses):
+0A (hex), 10 (decimal),	4 bytes : The byte where the bitmap image data (pixel array) can be found.
+12	      18	      4	    The bitmap width in pixels (signed integer)
+16	      22	      4	    The bitmap height in pixels (signed integer)
